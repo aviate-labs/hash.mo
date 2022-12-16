@@ -1,5 +1,5 @@
-import Blob "mo:base/Blob";
-import Text "mo:base/Text";
+import Blob "mo:base-0.7.3/Blob";
+import Text "mo:base-0.7.3/Text";
 
 import CRC32 "../src/CRC32";
 

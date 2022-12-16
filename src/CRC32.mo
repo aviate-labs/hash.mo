@@ -1,9 +1,9 @@
-import Array "mo:base/Array";
+import Array "mo:base-0.7.3/Array";
 import Array_ "mo:array/Array";
-import Hash "mo:base/Hash";
-import Iter "mo:base/Iter";
-import Nat8 "mo:base/Nat8";
-import Nat32 "mo:base/Nat32";
+import Hash "mo:base-0.7.3/Hash";
+import Iter "mo:base-0.7.3/Iter";
+import Nat8 "mo:base-0.7.3/Nat8";
+import Nat32 "mo:base-0.7.3/Nat32";
 
 module CRC32 {
     // Returns the CRC-32 checksum of the given data using the IEEE polynomial.
