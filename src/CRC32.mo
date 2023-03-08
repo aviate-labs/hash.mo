@@ -130,28 +130,30 @@ module CRC32 {
             if (data.size() < 16 ) { return simpleUpdate(crc, table[0], data); };
             var u = ^crc;
 
-            var p = data;
-            while (p.size() > 8) {
+            let p = data;
+            var p_index = 0;
+
+            while ((p.size() - p_index : Nat)  > 8) {
                 u := u ^ (
-                    nat8ToNat32(p[0])
-                  | nat8ToNat32(p[1]) << 8
-                  | nat8ToNat32(p[2]) << 16
-                  | nat8ToNat32(p[3]) << 24
+                    nat8ToNat32(p[p_index + 0])
+                  | nat8ToNat32(p[p_index + 1]) << 8
+                  | nat8ToNat32(p[p_index + 2]) << 16
+                  | nat8ToNat32(p[p_index + 3]) << 24
                 );
-                u := table[0][Nat8.toNat(p[7])]
-                   ^ table[1][Nat8.toNat(p[6])]
-                   ^ table[2][Nat8.toNat(p[5])]
-                   ^ table[3][Nat8.toNat(p[4])]
+                u := table[0][Nat8.toNat(p[p_index + 7])]
+                   ^ table[1][Nat8.toNat(p[p_index + 6])]
+                   ^ table[2][Nat8.toNat(p[p_index + 5])]
+                   ^ table[3][Nat8.toNat(p[p_index + 4])]
                    ^ table[4][Nat32.toNat(u >> 24)]
                    ^ table[5][Nat32.toNat((u >> 16) & 0xFF)]
                    ^ table[6][Nat32.toNat((u >> 8) & 0xFF)]
                    ^ table[7][Nat32.toNat(u & 0xFF)];
-                p := Array_.drop(p, 8);
-
+                   
+                p_index += 8;
             };
             u := ^u;
 
-            simpleUpdate(u, table[0], p);
+            simpleUpdate(u, table[0], Array_.drop(p, p_index));
         };
 
         private func simpleUpdate(crc : Nat32, table: [Nat32], data : [Nat8]) : Nat32 {
