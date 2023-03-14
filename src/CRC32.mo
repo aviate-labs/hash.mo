@@ -12,7 +12,9 @@ module CRC32 {
     
     // Returns the CRC-32 checksum of the given data using the IEEE polynomial.
     public func checksum(data : [Nat8]) : Hash.Hash {
-        Table.slicingUpdate(0, Table.slicingTable, data);
+        let crc32 = CRC32();
+        crc32.update(data);
+        crc32.finish();
     };
 
     public class CRC32(){
@@ -123,48 +125,6 @@ module CRC32 {
     module Table {
         type Table        = [Nat32]; // size = 256
         type SlicingTable = [Table]; // size = 8
-
-        // Uses the slicing-by-8 algorithm to update the CRC.
-        public func slicingUpdate(crc : Nat32, table: [[Nat32]], data : [Nat8]) : Nat32 {
-            if (data.size() == 0 ) { return crc; };
-            if (data.size() < 16 ) { return simpleUpdate(crc, table[0], data); };
-            var u = ^crc;
-
-            let p = data;
-            var p_index = 0;
-
-            while ((p.size() - p_index : Nat)  > 8) {
-                u := u ^ (
-                    nat8ToNat32(p[p_index + 0])
-                  | nat8ToNat32(p[p_index + 1]) << 8
-                  | nat8ToNat32(p[p_index + 2]) << 16
-                  | nat8ToNat32(p[p_index + 3]) << 24
-                );
-                u := table[0][Nat8.toNat(p[p_index + 7])]
-                   ^ table[1][Nat8.toNat(p[p_index + 6])]
-                   ^ table[2][Nat8.toNat(p[p_index + 5])]
-                   ^ table[3][Nat8.toNat(p[p_index + 4])]
-                   ^ table[4][Nat32.toNat(u >> 24)]
-                   ^ table[5][Nat32.toNat((u >> 16) & 0xFF)]
-                   ^ table[6][Nat32.toNat((u >> 8) & 0xFF)]
-                   ^ table[7][Nat32.toNat(u & 0xFF)];
-                   
-                p_index += 8;
-            };
-            u := ^u;
-
-            simpleUpdate(u, table[0], Array_.drop(p, p_index));
-        };
-
-        private func simpleUpdate(crc : Nat32, table: [Nat32], data : [Nat8]) : Nat32 {
-            var u = ^crc;
-
-            for (v in data.vals()) {
-                u := table[Nat8.toNat(nat32ToNat8(u) ^ v)] ^ (u >> 8);
-            };
-            
-            ^u;
-        };
 
         public let slicingTable : SlicingTable = [
             [
