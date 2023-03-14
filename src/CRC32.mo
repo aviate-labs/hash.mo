@@ -1,54 +1,129 @@
 import Array "mo:base-0.7.3/Array";
 import Array_ "mo:array/Array";
+import Buffer "mo:base-0.7.3/Buffer";
 import Hash "mo:base-0.7.3/Hash";
 import Iter "mo:base-0.7.3/Iter";
 import Nat8 "mo:base-0.7.3/Nat8";
 import Nat32 "mo:base-0.7.3/Nat32";
 
 module CRC32 {
+    type Buffer<A> = Buffer.Buffer<A>;
+    
     // Returns the CRC-32 checksum of the given data using the IEEE polynomial.
     public func checksum(data : [Nat8]) : Hash.Hash {
-        Table.slicingUpdate(0, Table.slicingTable, data);
+        let crc32 = CRC32();
+        crc32.update(data);
+        crc32.finish();
+    };
+
+    public class CRC32(){
+        var input_size = 0;
+
+        let PAYLOAD_SIZE = 8;
+        var payload = Array.init<Nat8>(PAYLOAD_SIZE, 0);
+
+        let buffer : Buffer<Nat8> = Buffer.Buffer<Nat8>(PAYLOAD_SIZE);
+        var crc : Nat32 = 0xFFFF_FFFF;
+        
+        public func update(data : [Nat8]) {
+            input_size += data.size();
+
+            if (input_size < 16) { 
+                for (byte in data.vals()){
+                    buffer.add(byte);
+                };
+                return;
+            };
+
+            var buffer_index = 0;
+
+            while (buffer_index < buffer.size()) {
+                payload[buffer_index % PAYLOAD_SIZE] := buffer.get(buffer_index);
+
+                if (buffer_index % PAYLOAD_SIZE == 7) {
+                    crc := singleSlicingUpdate(crc);
+                };
+
+                buffer_index += 1;
+            };
+
+            buffer.clear();
+
+            let offset = buffer_index % PAYLOAD_SIZE;
+            var data_index = 0;
+
+            while (((((data_index + offset) / PAYLOAD_SIZE ) + 1) * PAYLOAD_SIZE) < data.size()){
+                let i = (offset + data_index) % PAYLOAD_SIZE;
+                payload[i] := data[data_index];
+
+                if (i == 7){
+                    crc := singleSlicingUpdate(crc);
+                };
+
+                data_index += 1;
+            };
+
+            for (i in Iter.range(data_index, data.size() - 1)) {
+                buffer.add(data[i]);
+            };
+        };
+
+        func singleSlicingUpdate(crc: Nat32) : Nat32 {
+            let table = Table.slicingTable;
+            var u = crc;
+
+            let p = payload;
+
+            u := u ^ (
+                nat8ToNat32(p[0])
+                | nat8ToNat32(p[1]) << 8
+                | nat8ToNat32(p[2]) << 16
+                | nat8ToNat32(p[3]) << 24
+            );
+            u := table[0][Nat8.toNat(p[7])]
+                ^ table[1][Nat8.toNat(p[6])]
+                ^ table[2][Nat8.toNat(p[5])]
+                ^ table[3][Nat8.toNat(p[4])]
+                ^ table[4][Nat32.toNat(u >> 24)]
+                ^ table[5][Nat32.toNat((u >> 16) & 0xFF)]
+                ^ table[6][Nat32.toNat((u >> 8) & 0xFF)]
+                ^ table[7][Nat32.toNat(u & 0xFF)];
+
+            u;
+        };
+
+        func simpleUpdate(crc: Nat32, data: Buffer<Nat8>) : Nat32 {
+            let table = Table.slicingTable[0];
+
+            var u = crc;
+            for (v in data.vals()) {
+                u := table[Nat8.toNat(nat32ToNat8(u) ^ v)] ^ (u >> 8);
+            };
+            
+            ^u;
+        };
+
+        public func reset(){
+            input_size := 0;
+            crc := 0xFFFF_FFFF;
+            buffer.clear();
+        };
+
+        public func finish() : Hash.Hash {
+            
+            let res = if (buffer.size() == 0) { crc } else {
+                simpleUpdate(crc, buffer);
+            };
+
+            reset();
+
+            return res;
+        };
     };
 
     module Table {
         type Table        = [Nat32]; // size = 256
         type SlicingTable = [Table]; // size = 8
-
-        // Uses the slicing-by-8 algorithm to update the CRC.
-        public func slicingUpdate(crc : Nat32, table: [[Nat32]], data : [Nat8]) : Nat32 {
-            if (data.size() == 0 ) { return crc; };
-            if (data.size() < 16 ) { return simpleUpdate(crc, table[0], data); };
-            var u = ^crc;
-            var p = data;
-            while (p.size() > 8) {
-                u := u ^ (
-                    nat8ToNat32(p[0])
-                  | nat8ToNat32(p[1]) << 8
-                  | nat8ToNat32(p[2]) << 16
-                  | nat8ToNat32(p[3]) << 24
-                );
-                u := table[0][Nat8.toNat(p[7])]
-                   ^ table[1][Nat8.toNat(p[6])]
-                   ^ table[2][Nat8.toNat(p[5])]
-                   ^ table[3][Nat8.toNat(p[4])]
-                   ^ table[4][Nat32.toNat(u >> 24)]
-                   ^ table[5][Nat32.toNat((u >> 16) & 0xFF)]
-                   ^ table[6][Nat32.toNat((u >> 8) & 0xFF)]
-                   ^ table[7][Nat32.toNat(u & 0xFF)];
-                p := Array_.drop(p, 8);
-            };
-            u := ^u;
-            simpleUpdate(u, table[0], p);
-        };
-
-        private func simpleUpdate(crc : Nat32, table: [Nat32], data : [Nat8]) : Nat32 {
-            var u = ^crc;
-            for (v in data.vals()) {
-                u := table[Nat8.toNat(nat32ToNat8(u) ^ v)] ^ (u >> 8)
-            };
-            ^u;
-        };
 
         public let slicingTable : SlicingTable = [
             [
