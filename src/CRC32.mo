@@ -1,7 +1,6 @@
 import Array "mo:base-0.7.3/Array";
 import Array_ "mo:array/Array";
 import Buffer "mo:base-0.7.3/Buffer";
-import Debug "mo:base-0.7.3/Debug";
 import Hash "mo:base-0.7.3/Hash";
 import Iter "mo:base-0.7.3/Iter";
 import Nat8 "mo:base-0.7.3/Nat8";
@@ -25,7 +24,7 @@ module CRC32 {
 
         let buffer : Buffer<Nat8> = Buffer.Buffer<Nat8>(PAYLOAD_SIZE);
         var crc : Nat32 = 0xFFFF_FFFF;
-
+        
         public func update(data : [Nat8]) {
             input_size += data.size();
 

@@ -1,5 +1,4 @@
 import Blob "mo:base-0.7.3/Blob";
-import Debug "mo:base-0.7.3/Debug";
 import Text "mo:base-0.7.3/Text";
 
 import CRC32 "../src/CRC32";
